@@ -15,7 +15,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using System.Security.Policy;
-using System.Runtime.InteropServices;
 using System.Runtime.Remoting.Lifetime;
 
 
@@ -23,16 +22,24 @@ namespace ConsoleApp1
 {
     internal class Program
     {
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetConsoleWindow();
 
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_HIDE = 0;
         static void Main(string[] args)
         {
+            var handle = GetConsoleWindow();
+            ShowWindow(handle, SW_HIDE);
+
             OutputDiskCUsage();
             UptimeChecker uptimeChecker = new UptimeChecker();
             uptimeChecker.CheckUptime();
             CheckRamUsage();
-            /*CheckTemperature();*/
-            CheckResourceUsage();
-            RunProgramAndDeleteFile("C:\\Program Files (x86)\\VirtualDJ\\virtualdj8.exe", "C:\\Users\\Elite\\Desktop\\VNCHELPER.txt");
+            RunProgramAndDeleteFile("C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe", ".\\VNCHELPER.TXT");
+
 
 
             void CheckRamUsage()
@@ -56,58 +63,6 @@ namespace ConsoleApp1
 
 
 
-            void CheckResourceUsage()
-            {
-                FileWriting fileWriting = new FileWriting();
-                try
-                {
-                    var processes = Process.GetProcesses();
-                    foreach (var process in processes)
-                    {
-                        if (process.Threads.Count > 0)
-                        {
-                            var cpuUsage = process.TotalProcessorTime.TotalMilliseconds / Environment.ProcessorCount / Stopwatch.Frequency;
-                            if (cpuUsage > 0.5)
-                            {
-                                string resourceusage = "Process: " + process.ProcessName + " is using too much CPU resources.";
-                                fileWriting.WriteToFile(resourceusage);
-                            }
-                            else if (process.WorkingSet64 > 8000000)
-                            { //8000000 bytes = 8mb
-                                fileWriting.WriteToFile("Process: " + process.ProcessName + " is using too much Memory resources.");
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    fileWriting.WriteToFile("Error: Unable to retrieve process data." + ex.Message);
-                }
-            }
-
-
-
-            /*void CheckTemperature()
-            {
-                FileWriting fileWriting = new FileWriting();
-                try
-                {
-                    ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\WMI", "SELECT * FROM MSAcpi_ThermalZoneTemperature");
-                    foreach (ManagementObject obj in searcher.Get())
-                    {
-                        string temp = obj["CurrentTemperature"].ToString();
-                        string temperature = "Temperature: " + (Convert.ToInt32(temp) - 2732) + "°C";
-                        fileWriting.WriteToFile(temperature);
-                    }
-                }
-                catch (ManagementException)
-                {
-                    fileWriting.WriteToFile("Error: Unable to retrieve temperature data.");
-                }
-            } */
-
-
-
             void OutputDiskCUsage()
             {
                 FileWriting fileWriting = new FileWriting();
@@ -126,13 +81,12 @@ namespace ConsoleApp1
             {
                 try
                 {
-                    // Start the program
                     Process process = new Process();
                     process.StartInfo.FileName = programPath;
+                    process.StartInfo.CreateNoWindow = true;
                     process.Start();
                     process.WaitForExit();
 
-                    // Delete the file
                     if (File.Exists(filePath))
                     {
                         File.Delete(filePath);
@@ -140,54 +94,58 @@ namespace ConsoleApp1
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error running program or deleting file: " + ex.Message);
+                    FileWriting fileWriting = new FileWriting();
+                    fileWriting.WriteToFile("Error running program or deleting file: " + ex.Message);
                 }
             }
         }
 
-
-    class UptimeChecker
-    {
-        [DllImport("kernel32.dll")]
-        static extern ulong GetTickCount64();
-
-        public void CheckUptime()
+        class UptimeChecker
         {
-            try
+
+            [DllImport("kernel32.dll", SetLastError = true)]
+            static extern ulong GetTickCount64();
+
+
+
+            public void CheckUptime()
             {
-                // Get the tick count
-                ulong tickCount = GetTickCount64();
-                // Convert the tick count to a TimeSpan object
-                var uptime = new TimeSpan(0, 0, 0, 0, (int)tickCount);
-                // Display the uptime
-                Console.WriteLine("Uptime: {0} days {1} hours {2} minutes {3} seconds",
-                    uptime.Days, uptime.Hours, uptime.Minutes, uptime.Seconds);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: Unable to retrieve uptime data. " + ex.Message);
+                try
+                {
+                    ulong tickCount = GetTickCount64();
+                    var uptime = TimeSpan.FromMilliseconds(tickCount);
+                    string uptimeString = $"Uptime: {uptime.Days} days {uptime.Hours} hours {uptime.Minutes} minutes {uptime.Seconds} seconds";
+                    FileWriting fileWriting = new FileWriting();
+                    fileWriting.WriteToFile(uptimeString);
+                }
+                catch (Exception ex)
+                {
+                    FileWriting fileWriting = new FileWriting();
+                    fileWriting.WriteToFile("Error: Unable to retrieve uptime data. " + ex.Message);
+                }
             }
         }
-    }
+
+  
 
 
 
 
-    class FileWriting
+        class FileWriting
         {
             public void WriteToFile(string textToWrite)
             {
                 try
                 {
-                    // Open the file to write to
-                    using (StreamWriter sw = File.AppendText("C:\\Users\\Elite\\Desktop\\VNCHELPER.txt"))
+                    using (StreamWriter sw = File.AppendText(".\\VNCHELPER.TXT"))
                     {
                         sw.WriteLine(textToWrite);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error writing to file: " + ex.Message);
+                    FileWriting fileWriting = new FileWriting();
+                    fileWriting.WriteToFile("Error writing to file: " + ex.Message);
                 }
             }
 
