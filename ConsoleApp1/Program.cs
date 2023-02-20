@@ -38,7 +38,7 @@ namespace ConsoleApp1
             UptimeChecker uptimeChecker = new UptimeChecker();
             uptimeChecker.CheckUptime();
             CheckRamUsage();
-            RunProgramAndDeleteFile("C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe", ".\\VNCHELPER.TXT");
+            
 
 
 
@@ -74,31 +74,9 @@ namespace ConsoleApp1
                 fileWriting.WriteToFile(freediskspace);
 
             }
-
-
-
-            void RunProgramAndDeleteFile(string programPath, string filePath)
-            {
-                try
-                {
-                    Process process = new Process();
-                    process.StartInfo.FileName = programPath;
-                    process.StartInfo.CreateNoWindow = true;
-                    process.Start();
-                    process.WaitForExit();
-
-                    if (File.Exists(filePath))
-                    {
-                        File.Delete(filePath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    FileWriting fileWriting = new FileWriting();
-                    fileWriting.WriteToFile("Error running program or deleting file: " + ex.Message);
-                }
-            }
+           
         }
+
 
         class UptimeChecker
         {
